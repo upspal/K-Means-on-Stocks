@@ -21,10 +21,6 @@ The K-Means algorithm is a popular unsupervised learning method used for cluster
    - The algorithm iteratively assigned each data point to the nearest centroid and updated the centroids based on the mean of the assigned points.
    - The process was repeated until the centroids stabilized or a maximum number of iterations was reached.
 
-## Requirements
-
-To run the code and reproduce the results, please refer to requirements.txt for dependencies
-
 ## How to Run
 
 1. Clone the repository.
