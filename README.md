@@ -9,7 +9,7 @@ The K-Means algorithm is a popular unsupervised learning method used for cluster
 ## Implementation Details
 
 1. **Data Collection**: 
-   - I collected historical stock price data for NIFTY 50 stocks using the `yfinance` library.
+   - Historical stock price data was collected for NIFTY 50 stocks using the `yfinance` library.
    - The data includes daily closing prices, which were used to calculate various financial metrics.
 
 2. **Data Preprocessing**:
