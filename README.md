@@ -6,7 +6,7 @@ This project involves the manual implementation of the K-Means clustering algori
 
 The K-Means algorithm is a popular unsupervised learning method used for clustering data into distinct groups based on their features. In this project, I manually implemented the K-Means algorithm from scratch, without relying on pre-built libraries, to better understand its inner workings and nuances.
 
-![Kmeans-in-action](https://imgur.com/iDtx9Wh)
+![Kmeans-in-action](https://i.imgur.com/iDtx9Wh.gif)
 
 ## Implementation Details
 
