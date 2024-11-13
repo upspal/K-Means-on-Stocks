@@ -2,11 +2,34 @@
 
 This project involves the manual implementation of the K-Means clustering algorithm applied to stocks. The primary objective of this project was to conduct personal research and gain a deeper understanding of clustering techniques and their applications in financial data analysis.
 
+[[https://kmeans-on-stocks.streamlit.app/]]
+
 ## Project Overview
 
 The K-Means algorithm is a popular unsupervised learning method used for clustering data into distinct groups based on their features. In this project, I manually implemented the K-Means algorithm from scratch, without relying on pre-built libraries, to better understand its inner workings and nuances.
 
 ![Kmeans-in-action](https://i.imgur.com/iDtx9Wh.gif)
+
+## Features
+1. **Interactive Stock Selection**:
+   - Users can select multiple stocks from the NIFTY 50 index and add custom stocks for analysis
+   - Flexible timeframe selection to analyze different time periods
+   - Ability to specify the number of clusters (k) for the analysis
+
+2. **Real-time Clustering**:
+   - Dynamic clustering of selected stocks based on user parameters
+   - Visual representation of clusters using dimensionality reduction (PCA)
+   - Interactive visualization showing cluster assignments and centroids
+
+3. **Data Analysis Tools**:
+   - Detailed view of financial metrics for each stock
+   - Cluster-wise analysis showing common characteristics
+   - Visual tracking of clustering iterations and convergence
+
+4. **User-friendly Interface**:
+   - Clean and intuitive Streamlit-based web interface
+   - Real-time updates as parameters are modified
+   - Easy-to-interpret visualizations of clustering results
 
 ## Implementation Details
 
@@ -22,11 +45,6 @@ The K-Means algorithm is a popular unsupervised learning method used for cluster
    - Initialize the centroids randomly from the data points.
    - The algorithm iteratively assigned each data point to the nearest centroid and updated the centroids based on the mean of the assigned points.
    - The process was repeated until the centroids stabilized or a maximum number of iterations was reached.
-
-4. **Streamlit Application**:
-   - A Streamlit application is provided to interactively run the K-Means clustering on selected stocks.
-   - Users can select stocks, define the timeframe, and specify the number of clusters.
-   - The application visualizes the clustering results and provides detailed data for each cluster.
 
 ## How to Run
 
