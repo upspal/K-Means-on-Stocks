@@ -2,7 +2,7 @@
 
 This project involves the manual implementation of the K-Means clustering algorithm applied to stocks. The primary objective of this project was to conduct personal research and gain a deeper understanding of clustering techniques and their applications in financial data analysis.
 
-[[https://kmeans-on-stocks.streamlit.app/]]
+[Try it out here!](https://kmeans-on-stocks.streamlit.app/)
 
 ## Project Overview
 
