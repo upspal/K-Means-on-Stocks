@@ -39,7 +39,10 @@ def plot_clusters(scaled_data, labels, centroids, iteration):
         mask = (labels == label)
         if any(mask):
             color = scatter.to_rgba(label)  # Get exact color used for this label
-            legend_elements.append(plt.scatter([], [], c=[color], label=f'Cluster {label+1}'))
+            i = 0           
+            for i in label:
+                label[i]=label[i]+1
+            legend_elements.append(plt.scatter([], [], c=[color], label=f'Cluster {label}'))
     
     # Add centroids to legend and display
     plt.legend(handles=legend_elements + [plt.scatter([], [], c='red', s=50, label='Centroids')])
