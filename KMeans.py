@@ -5,7 +5,7 @@ import numpy as np
 from sklearn.decomposition import PCA
 from niftystocks import ns
 import matplotlib.pyplot as plt
-from datetime import date
+from datetime import date, timedelta
 
 def random_centroids(scaled_data, k):
     centroids = []
