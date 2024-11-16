@@ -4,7 +4,6 @@ import pandas as pd
 import numpy as np
 from sklearn.decomposition import PCA
 from niftystocks import ns
-from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
 
 def random_centroids(scaled_data, k):
@@ -99,7 +98,7 @@ def main():
         return
     
     st.sidebar.header("Rerun Clustering")
-    st.sidebar.write("The clustering can generate different results as each iteration reaches a local minimum!")
+    st.sidebar.write("The clustering can generate different results per run as each iteration reaches a local minimum!")
     if st.sidebar.button("Rerun"):
         st.cache_data.clear()
 
@@ -147,8 +146,6 @@ def main():
             st.header("Clustered Stock Returns Data")
             dataset=cluster_data.join(dataset['Cluster']) 
             st.write(dataset)
-            
-        
 
     except Exception as e:
         st.error(f"An error occurred: {str(e)}")
