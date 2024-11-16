@@ -35,7 +35,7 @@ def plot_clusters(scaled_data, labels, centroids, iteration):
     legend_elements = []
     for label in unique_labels:
         color = scatter.cmap(scatter.norm(label))
-        legend_elements.append(plt.scatter([], [], c=[color], label=f'Cluster {label}'))
+        legend_elements.append(plt.scatter([], [], c=[color], label=f'Cluster {label+1}'))
     
     # Add centroids to legend and display
     plt.legend(handles=legend_elements + [plt.scatter([], [], c='red', s=50, label='Centroids')])
