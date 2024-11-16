@@ -5,6 +5,7 @@ import numpy as np
 from sklearn.decomposition import PCA
 from niftystocks import ns
 import matplotlib.pyplot as plt
+from datetime import date
 
 def random_centroids(scaled_data, k):
     centroids = []
@@ -74,8 +75,8 @@ def main():
     # Clustering Parameters
     st.sidebar.header("Clustering Parameters")
     k = st.sidebar.slider("Number of Clusters (k)", min_value=2, max_value=10, value=4)
-    timeframe_start = st.sidebar.date_input("Timeframe(Start)", pd.to_datetime("2020-01-01"), max_value=pd.to_datetime("2023-01-01"))
-    timeframe_end = st.sidebar.date_input("Timeframe(End)", pd.to_datetime("2021-01-01"), max_value=pd.to_datetime("2023-01-01"))
+    timeframe_start = st.sidebar.date_input("Timeframe (Start)", pd.to_datetime("2020-01-01"), max_value=pd.to_datetime(date.today() - timedelta(days=365)))
+    timeframe_end = st.sidebar.date_input("Timeframe(End)", pd.to_datetime("2021-01-01"), max_value=pd.to_datetime(date.today()))
 
     # Stock Selection
     st.sidebar.header("Stock Selection")
