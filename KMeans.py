@@ -55,7 +55,7 @@ def KMeansClustering(scaled_data, k):
     plot_clusters(scaled_data, labels, centroids, iteration)
     # Map cluster labels to 1-based sequential numbers
     unique_labels = sorted(set(labels))
-    label_mapping = {old: new+1 for new, old in enumerate(unique_labels)}
+    label_mapping = {old: new for new, old in enumerate(unique_labels)}
     mapped_labels = labels.map(label_mapping)
     scaled_data = pd.concat([scaled_data, pd.Series(mapped_labels, name='Cluster')], axis=1)
     return scaled_data        
