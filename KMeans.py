@@ -69,8 +69,7 @@ def main():
     st.sidebar.title("📈 K-Means Clustering for Stocks")
     st.sidebar.write("Created by")
     linkedin = "https://www.linkedin.com/in/pranavuppall"
-    github = "https://github.com/upspal"
-    st.sidebar.markdown(f'<a href="{linkedin}" target="_blank" style="text-decoration: none; color: inherit;"><img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" width="25" height="25" style="vertical-align: middle; margin-right: 10px;"></a><a href="{github}" target="_blank" style="text-decoration: none; color: inherit;"><img src="https://uxwing.com/wp-content/themes/uxwing/download/brands-and-social-media/github-white-icon.png" width="25" height="25" style="vertical-align: middle; margin-right: 10px;">`Pranav Uppal`</a>', unsafe_allow_html=True)
+    st.markdown(f'<a href="{linkedin}" target="_blank" style="text-decoration: none; color: inherit;"><img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" width="25" height="25" style="vertical-align: middle; margin-right: 10px;">`Pranav Uppal`</a>', unsafe_allow_html=True)
 
     # Clustering Parameters
     st.sidebar.header("Clustering Parameters")
