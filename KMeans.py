@@ -26,24 +26,15 @@ def plot_clusters(scaled_data, labels, centroids, iteration):
     data_2d = pca.fit_transform(scaled_data)
     centroids_2d = pca.transform(centroids.T)
     plt.title("Iteration: {}".format(iteration))
-    # Create scatter plot with consistent colormap
     scatter = plt.scatter(data_2d[:, 0], data_2d[:, 1], c=labels, cmap='viridis')
     plt.scatter(centroids_2d[:, 0], centroids_2d[:, 1], c='red', s=50, label='Centroids')
-    
-    # Get the colors actually used in the scatter plot
-    # Get unique labels and their actual colors from the scatter plot
     unique_labels = sorted(set(labels))
     legend_elements = []
-    for label in unique_labels:
-        # Get the actual color used in the scatter plot for this label
+    for idx, label in enumerate(unique_labels):
         mask = (labels == label)
         if any(mask):
             color = scatter.to_rgba(label)  # Get exact color used for this label
-            i = 0           
-            for i in label:
-                label[i]=label[i]+1
-            legend_elements.append(plt.scatter([], [], c=[color], label=f'Cluster {label}'))
-    
+            legend_elements.append(plt.scatter([], [], c=[color], label=f'Cluster {idx+1}'))
     # Add centroids to legend and display
     plt.legend(handles=legend_elements + [plt.scatter([], [], c='red', s=50, label='Centroids')])
     st.pyplot(plt)
