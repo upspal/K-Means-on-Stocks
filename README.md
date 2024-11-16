@@ -18,18 +18,12 @@ The K-Means algorithm is a popular unsupervised learning method used for cluster
 
 2. **Real-time Clustering**:
    - Dynamic clustering of selected stocks based on user parameters
-   - Visual representation of clusters using dimensionality reduction (PCA)
    - Interactive visualization showing cluster assignments and centroids
 
 3. **Data Analysis Tools**:
    - Detailed view of financial metrics for each stock
    - Cluster-wise analysis showing common characteristics
    - Visual tracking of clustering iterations and convergence
-
-4. **User-friendly Interface**:
-   - Clean and intuitive Streamlit-based web interface
-   - Real-time updates as parameters are modified
-   - Easy-to-interpret visualizations of clustering results
 
 ## Implementation Details
 
