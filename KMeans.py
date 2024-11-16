@@ -31,7 +31,7 @@ def plot_clusters(scaled_data, labels, centroids, iteration):
     plt.scatter(centroids_2d[:, 0], centroids_2d[:, 1], c='red', s=50, label='Centroids')
     
     # Get the colors actually used in the scatter plot
-    unique_labels = sorted(set(labels))
+    unique_labels = range(len(set(labels)))
     legend_elements = []
     for label in unique_labels:
         color = scatter.cmap(scatter.norm(label))
