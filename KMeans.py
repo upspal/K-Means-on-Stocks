@@ -75,7 +75,7 @@ def main():
     # Clustering Parameters
     st.sidebar.header("Clustering Parameters")
     k = st.sidebar.slider("Number of Clusters (k)", min_value=2, max_value=10, value=4)
-    timeframe_start = st.sidebar.date_input("Timeframe (Start)", pd.to_datetime("2020-01-01"), max_value=pd.to_datetime(date.today() - timedelta(days=365)))
+    timeframe_start = st.sidebar.date_input("Timeframe (Start)", pd.to_datetime("2020-01-01"), max_value=pd.to_datetime(date.today() - timedelta(days=-1)))
     timeframe_end = st.sidebar.date_input("Timeframe(End)", pd.to_datetime("2021-01-01"), max_value=pd.to_datetime(date.today()))
 
     # Stock Selection
