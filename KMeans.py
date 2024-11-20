@@ -57,7 +57,7 @@ def KMeansClustering(scaled_data, k):
     label_mapping = {old: new+1 for new, old in enumerate(unique_labels)}
     mapped_labels = labels.map(label_mapping)
     scaled_data = pd.concat([scaled_data, pd.Series(mapped_labels, name='Cluster')], axis=1)
-    return scaled_data        
+    return scaled_data
 
 def main():
     st.set_page_config(
@@ -144,7 +144,28 @@ def main():
             st.header("Clustered Stock Returns Data")
             dataset=cluster_data.join(dataset['Cluster']) 
             st.write(dataset)
-
+        
+        st.header("Cluster Summary")
+        
+        summary_data = pd.DataFrame(columns=["Cluster", "Average Returns", "Volatility", "Sharpe Ratio"])
+        for cluster in dataset['Cluster'].unique():
+            cluster_data = dataset[dataset['Cluster'] == cluster]
+            avg_returns = cluster_data['Mean Returns'].mean()
+            volatility = cluster_data['Volatility'].mean()
+            sharpe_ratio = cluster_data['Sharpe Ratio'].mean()
+            summary_data = pd.concat([summary_data, pd.DataFrame({"Cluster": [cluster], "Average Returns": [avg_returns], "Volatility": [volatility], "Sharpe Ratio": [sharpe_ratio]})], ignore_index=True)
+            summary_data = summary_data.sort_values("Cluster", ascending=True)
+        # Display summary data using st.metric
+        for index, row in summary_data.iterrows():
+            st.header(f"Cluster {row['Cluster']}")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric(label="Average Returns", value=f"{row['Average Returns']:.2%}")
+            with col2:
+                st.metric(label="Volatility", value=f"{row['Volatility']:.2f}")
+            with col3:
+                st.metric(label="Sharpe Ratio", value=f"{row['Sharpe Ratio']:.2f}")
+            
     except Exception as e:
         st.error(f"An error occurred: {str(e)}")
         if "Invalid ticker" in str(e):
