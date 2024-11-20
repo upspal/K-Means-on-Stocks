@@ -160,7 +160,7 @@ def main():
             st.header(f"Cluster {row['Cluster']}")
             col1, col2, col3 = st.columns(3)
             with col1:
-                st.metric(label="Average Returns", value=f"{row['Average Returns']:.2%}")
+                st.metric(label="Average Returns", value=f"{row['Average Returns'] * 100:.2f}%")
             with col2:
                 st.metric(label="Volatility", value=f"{row['Volatility']:.2f}")
             with col3:
