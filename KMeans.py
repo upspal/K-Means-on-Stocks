@@ -2,9 +2,12 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 import numpy as np
-from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
+from sklearn.decomposition import PCA
+from sklearn.cluster import KMeans
 from datetime import date, timedelta
+import warnings
+warnings.filterwarnings('ignore')
 
 nifty50_tickers = [
     'RELIANCE.NS', 'HDFCBANK.NS', 'ICICIBANK.NS', 'INFY.NS', 'TCS.NS',
@@ -19,175 +22,254 @@ nifty50_tickers = [
     'HEROMOTOCO.NS', 'DIVISLAB.NS', 'UPL.NS', 'BPCL.NS', 'SHREECEM.NS'
 ]
 
-def random_centroids(scaled_data, k):
-    centroids = []
-    for i in range(k):
-        centroid = scaled_data.apply(lambda x: float(x.sample()))
-        centroids.append(centroid)
-    return pd.concat(centroids, axis=1)
-
-def get_labels(scaled_data, centroids):
-    distances = centroids.apply(lambda x: np.sqrt(((scaled_data - x) ** 2).sum(axis=1)))
-    return distances.idxmin(axis=1)
-
-def new_centroids(scaled_data, labels, k):
-    centroids = scaled_data.groupby(labels).apply(lambda x: np.exp(np.log(x).mean())).T
-    return centroids
-
-def plot_clusters(scaled_data, labels, centroids, iteration):
+def plot_clusters(scaled_data, labels, centroids, window_name):
     pca = PCA(n_components=2)
     data_2d = pca.fit_transform(scaled_data)
-    centroids_2d = pca.transform(centroids.T)
-    plt.title("Iteration: {}".format(iteration))
-    scatter = plt.scatter(data_2d[:, 0], data_2d[:, 1], c=labels, cmap='viridis')
-    plt.scatter(centroids_2d[:, 0], centroids_2d[:, 1], c='red', s=50, label='Centroids')
-    unique_labels = sorted(set(labels))
-    legend_elements = []
-    for idx, label in enumerate(unique_labels):
-        mask = (labels == label)
-        if any(mask):
-            color = scatter.to_rgba(label)  # Get exact color used for this label
-            legend_elements.append(plt.scatter([], [], c=[color], label=f'Cluster {idx+1}'))
-    # Add centroids to legend and display
-    plt.legend(handles=legend_elements + [plt.scatter([], [], c='red', s=50, label='Centroids')])
-    st.pyplot(plt)
+    centroids_2d = pca.transform(centroids)
 
-def KMeansClustering(scaled_data, k):
-    centroids = random_centroids(scaled_data, k)
-    old_centroids = pd.DataFrame() 
-    iteration = 1
-    max_iterations = 100
+    fig = plt.figure(figsize=(10, 8))
+    plt.title(f"Stock Clusters for {window_name}")
 
-    while iteration < max_iterations and not centroids.equals(old_centroids):
-        old_centroids = centroids
-        labels = get_labels(scaled_data, centroids)
-        centroids = new_centroids(scaled_data,labels,k)
-        iteration += 1
-    plot_clusters(scaled_data, labels, centroids, iteration)
-    # Map cluster labels to 1-based sequential numbers
-    unique_labels = sorted(set(labels))
-    label_mapping = {old: new+1 for new, old in enumerate(unique_labels)}
-    mapped_labels = labels.map(label_mapping)
-    scaled_data = pd.concat([scaled_data, pd.Series(mapped_labels, name='Cluster')], axis=1)
-    return scaled_data
+    # Plot each cluster with a different color
+    unique_labels = np.unique(labels)
+    for i in unique_labels:
+        plt.scatter(
+            data_2d[labels == i, 0],
+            data_2d[labels == i, 1],
+            label=f'Cluster {i+1}'
+        )
+
+    # Plot centroids
+    plt.scatter(
+        centroids_2d[:, 0],
+        centroids_2d[:, 1],
+        c='red',
+        marker='X',
+        s=100,
+        label='Centroids'
+    )
+
+    plt.xlabel("Principal Component 1")
+    plt.ylabel("Principal Component 2")
+    plt.legend()
+    plt.grid(True, linestyle='--', alpha=0.7)
+    return fig
+
+def run_kmeans_for_window(data, window, k=4):
+    start_date = window['start']
+    end_date = window['end']
+    window_name = window['name']
+
+    window_data = data.loc[start_date:end_date]
+
+    returns = window_data['Close'].pct_change().dropna()
+
+    returns = returns.dropna(axis=1)
+
+    features = ["Mean Returns", "Volatility", "Sharpe Ratio", "Max Drawdown", "Rolling_50_200_Ratio"]
+    cluster_data = pd.DataFrame(index=returns.columns)
+
+    cluster_data["Mean Returns"] = returns.mean() * 252  # Annualized
+    cluster_data["Volatility"] = returns.std() * np.sqrt(252)  # Annualized
+    cluster_data["Sharpe Ratio"] = cluster_data["Mean Returns"] / cluster_data["Volatility"]
+
+    # Calculate maximum drawdown
+    cumulative_returns = (1 + returns).cumprod()
+    rolling_max = cumulative_returns.cummax()
+    drawdowns = (cumulative_returns / rolling_max) - 1
+    cluster_data["Max Drawdown"] = drawdowns.min()
+
+    # Calculate 50-day and 200-day moving averages ratio
+    prices = window_data['Close']
+    for ticker in prices.columns:
+        if ticker in cluster_data.index:
+            ma_50 = prices[ticker].rolling(window=50).mean()
+            ma_200 = prices[ticker].rolling(window=200).mean()
+            # Use the last value of the ratio
+            if not ma_200.empty and not ma_50.empty and ma_200.iloc[-1] and ma_50.iloc[-1] and not np.isnan(ma_200.iloc[-1]) and not np.isnan(ma_50.iloc[-1]):
+                cluster_data.loc[ticker, "Rolling_50_200_Ratio"] = ma_50.iloc[-1] / ma_200.iloc[-1]
+
+    cluster_data = cluster_data.dropna()
+
+    scaled_data = ((cluster_data - cluster_data.min()) / (cluster_data.max() - cluster_data.min())) * 9 + 1
+
+    # Run K-means clustering
+    kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
+    labels = kmeans.fit_predict(scaled_data)
+
+    result_data = cluster_data.copy()
+    result_data['Cluster'] = labels + 1  # Make clusters 1-based
+
+    centroids = pd.DataFrame(kmeans.cluster_centers_, columns=scaled_data.columns)
+
+    return {
+        'window': window_name,
+        'results': result_data,
+        'centroids': kmeans.cluster_centers_,
+        'features': features,
+        'plot_fig': plot_clusters(scaled_data, labels, centroids, window_name)
+    }
+
+def create_report(all_results, k=4):
+    report = pd.DataFrame()
+
+    for result in all_results:
+        window_name = result['window']
+        window_results = result['results']
+
+        for cluster_id in range(1, k+1):
+            cluster_stocks = window_results[window_results['Cluster'] == cluster_id]
+
+            if cluster_stocks.empty:
+                continue
+
+            for stock in cluster_stocks.index:
+                stock_data = {
+                    'Year': window_name,
+                    'Stock': stock,
+                    'Cluster': f"Cluster_{cluster_id}",
+                    'Mean_Returns': cluster_stocks.loc[stock, 'Mean Returns'],
+                    'Volatility': cluster_stocks.loc[stock, 'Volatility'],
+                    'Sharpe_Ratio': cluster_stocks.loc[stock, 'Sharpe Ratio'],
+                    'Max_Drawdown': cluster_stocks.loc[stock, 'Max Drawdown'],
+                    'MA_50_200_Ratio': cluster_stocks.loc[stock, 'Rolling_50_200_Ratio']
+                }
+                report = pd.concat([report, pd.DataFrame([stock_data])], ignore_index=True)
+
+    cluster_stats = report.groupby(['Year', 'Cluster']).agg({
+        'Mean_Returns': ['mean', 'min', 'max'],
+        'Volatility': ['mean', 'min', 'max'],
+        'Sharpe_Ratio': ['mean', 'min', 'max'],
+        'Max_Drawdown': ['mean', 'min', 'max'],
+        'MA_50_200_Ratio': ['mean', 'min', 'max'],
+        'Stock': 'count'
+    }).reset_index()
+
+    cluster_stats.columns = [
+        'Year', 'Cluster',
+        'Mean_Returns_Avg', 'Mean_Returns_Min', 'Mean_Returns_Max',
+        'Volatility_Avg', 'Volatility_Min', 'Volatility_Max',
+        'Sharpe_Ratio_Avg', 'Sharpe_Ratio_Min', 'Sharpe_Ratio_Max',
+        'Max_Drawdown_Avg', 'Max_Drawdown_Min', 'Max_Drawdown_Max',
+        'MA_Ratio_Avg', 'MA_Ratio_Min', 'MA_Ratio_Max',
+        'Stock_Count'
+    ]
+
+    return report, cluster_stats
+
+def create_transitions(stock_report):
+    stock_transitions = {}
+    for stock in stock_report['Stock'].unique():
+        stock_data = stock_report[stock_report['Stock'] == stock]
+        if len(stock_data) > 1:  # Only include stocks with data for multiple years
+            transitions = []
+            for year in range(2020, 2025):
+                year_data = stock_data[stock_data['Year'] == str(year)]
+                if not year_data.empty:
+                    cluster = year_data['Cluster'].values[0]
+                    transitions.append(cluster)
+                else:
+                    transitions.append('NA')
+            stock_transitions[stock] = transitions
+
+    transitions_df = pd.DataFrame.from_dict(stock_transitions, orient='index',
+                                           columns=['2020', '2021', '2022', '2023', '2024'])
+    transitions_df.index.name = 'Stock'
+    transitions_df.reset_index(inplace=True)
+    return transitions_df
 
 def main():
     st.set_page_config(
-    page_title="K-Means Clustering for Stocks",
-    page_icon="📈",
-    layout="wide",
-    initial_sidebar_state="expanded")
+        page_title="K-Means Clustering for Nifty50 Stocks",
+        page_icon="📈",
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
 
-    st.title("K-Means Clustering for Stocks")
-    st.sidebar.title("📈 K-Means Clustering for Stocks")
+    st.title("K-Means Clustering for Nifty50 Stocks (Yearly Analysis)")
+    st.sidebar.title("📈 Clustering Parameters")
     st.sidebar.write("Created by")
     linkedin = "https://www.linkedin.com/in/pranavuppall"
     st.sidebar.markdown(f'<a href="{linkedin}" target="_blank" style="text-decoration: none; color: inherit;"><img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" width="25" height="25" style="vertical-align: middle; margin-right: 10px;">`Pranav Uppal`</a>', unsafe_allow_html=True)
 
-    # Clustering Parameters
-    st.sidebar.header("Clustering Parameters")
+    # Parameters
     k = st.sidebar.slider("Number of Clusters (k)", min_value=2, max_value=10, value=4)
-    timeframe_start = st.sidebar.date_input("Timeframe (Start)", pd.to_datetime("2020-01-01"), max_value=pd.to_datetime(date.today() - timedelta(days=1)))
-    timeframe_end = st.sidebar.date_input("Timeframe(End)", pd.to_datetime("2021-01-01"), max_value=pd.to_datetime(date.today()))
+    download_start = st.sidebar.date_input("Download Start Date", pd.to_datetime("2019-01-01"))
+    download_end = st.sidebar.date_input("Download End Date", pd.to_datetime("2025-01-01"))
 
     # Stock Selection
     st.sidebar.header("Stock Selection")
-    custom_ticker = st.sidebar.text_input("Enter Custom Ticker (separated by space):")
-    select_all = st.sidebar.checkbox("Select All Stocks",value=True)
-    selected_stocks = []
-    if select_all:
-        selected_stocks = nifty50_tickers
-    else:
-        selected_stocks = st.sidebar.multiselect("Select Stock", nifty50_tickers)
-    if custom_ticker:
-        custom_stocks = [stock.strip().upper() for stock in custom_ticker.split(' ')]
-        selected_stocks.extend(custom_stocks)
-
-    # Remove duplicates
-    selected_stocks = list(set(selected_stocks))
+    select_all = st.sidebar.checkbox("Select All Nifty50 Stocks", value=True)
+    selected_stocks = nifty50_tickers if select_all else st.sidebar.multiselect("Select Stocks", nifty50_tickers)
 
     if not selected_stocks:
         st.warning("Please select at least one stock to proceed.")
         return
-    
-    st.sidebar.header("Rerun Clustering")
-    st.sidebar.write("The clustering can generate different results per run as each iteration reaches a local minimum!")
-    if st.sidebar.button("Rerun"):
-        st.cache_data.clear()
 
-    # Data Fetching and Preprocessing
-    try:
-        if timeframe_start >= timeframe_end:
-            st.error("Start date must be before end date. Please select appropriate dates.")
-            return
-        
-        data = yf.download(selected_stocks, start=timeframe_start, end=timeframe_end, progress=False)
-        
-        if data.empty or 'Adj Close' not in data.columns.get_level_values(0):
-            st.error("No data found for the selected stocks and timeframe. Please check if the stock symbols are correct or try a different timeframe.")
-            return
-            
-        returns = data['Adj Close'].pct_change()
-        returns = returns.iloc[1:]
-        returns = returns.dropna(axis=1, how='all')  # Drop columns that are all NaN
-        
-        if returns.empty or returns.shape[1] == 0:
-            st.error("No valid return data available for the selected stocks and timeframe. This may be due to invalid tickers or insufficient data in the period.")
+    # Run button
+    run_analysis = st.sidebar.button("Run Analysis")
+
+    if run_analysis:
+        with st.spinner("Downloading Nifty50 data..."):
+            data = yf.download(selected_stocks, start=download_start, end=download_end, progress=False)
+        st.success("Download complete!")
+
+        time_windows = []
+        for year in range(2020, 2025):
+            start = f"{year-1}-01-01"
+            end = f"{year}-01-01"
+            if pd.to_datetime(start) >= download_start and pd.to_datetime(end) <= download_end:
+                time_windows.append({
+                    'name': f"{year}",
+                    'start': start,
+                    'end': end
+                })
+
+        if not time_windows:
+            st.error("No valid time windows within the selected download period.")
             return
 
-        if len(returns.columns) < k:
-            st.error(f"Number of valid stocks ({len(returns.columns)}) is less than the number of clusters ({k}). Please select more stocks or reduce the number of clusters.")
-            return
+        with st.spinner("Running K-means clustering for each time window..."):
+            all_results = []
+            for window in time_windows:
+                st.write(f"Processing window: {window['name']}...")
+                result = run_kmeans_for_window(data, window, k=k)
+                all_results.append(result)
+                st.pyplot(result['plot_fig'])
+                st.write(f"Completed window: {window['name']}")
 
-        features = ["Mean Returns", "Volatility", "Sharpe Ratio"]
-        cluster_data = pd.DataFrame(index=returns.columns, columns=features)
-        cluster_data["Mean Returns"] = returns.mean()
-        cluster_data["Volatility"] = returns.std()
-        cluster_data["Sharpe Ratio"] = cluster_data["Mean Returns"] / cluster_data["Volatility"]
+        with st.spinner("Creating final report..."):
+            stock_report, cluster_stats = create_report(all_results, k=k)
+            transitions_df = create_transitions(stock_report)
 
-        cluster_data = cluster_data.dropna(subset=features)
+        st.header("Stock Cluster Assignments")
+        st.dataframe(stock_report)
 
-        if cluster_data.empty:
-            st.error("No valid features data after processing. Please try different stocks or timeframe.")
-            return
+        st.header("Cluster Statistics")
+        st.dataframe(cluster_stats)
 
-        scaled_data = ((cluster_data - cluster_data.min()) / (cluster_data.max() - cluster_data.min())) * 9 + 1
+        st.header("Cluster Transitions")
+        st.dataframe(transitions_df)
 
-        col1, col2 = st.columns(2)
-        with col1:
-            st.header("Clustered Stock Returns")
-            rawdataset = KMeansClustering(scaled_data, k)
-            dataset=rawdataset.dropna(subset=['Cluster'])
-
-        with col2:
-            st.header("Clustered Stock Returns Data")
-            dataset=cluster_data.join(dataset['Cluster']) 
-            st.write(dataset)
-        
-        st.header("Cluster Summary")
-        
-        summary_data = pd.DataFrame(columns=["Cluster", "Average Returns", "Volatility", "Sharpe Ratio"])
-        for cluster in dataset['Cluster'].unique():
-            cluster_group = dataset[dataset['Cluster'] == cluster]
-            avg_returns = cluster_group['Mean Returns'].mean()
-            volatility = cluster_group['Volatility'].mean()
-            sharpe_ratio = cluster_group['Sharpe Ratio'].mean()
-            summary_data = pd.concat([summary_data, pd.DataFrame({"Cluster": [cluster], "Average Returns": [avg_returns], "Volatility": [volatility], "Sharpe Ratio": [sharpe_ratio]})], ignore_index=True)
-        summary_data = summary_data.sort_values("Cluster", ascending=True)
-        # Display summary data using st.metric
-        for index, row in summary_data.iterrows():
-            st.header(f"Cluster {row['Cluster']}")
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric(label="Average Returns", value=f"{row['Average Returns'] * 100:.2f}%")
-            with col2:
-                st.metric(label="Volatility", value=f"{row['Volatility']:.2f}")
-            with col3:
-                st.metric(label="Sharpe Ratio", value=f"{row['Sharpe Ratio']:.2f}")
-            
-    except Exception as e:
-        st.error(f"An error occurred: {str(e)}")
-        st.error("Please check your inputs and try again. If the problem persists, the issue may be with data availability from Yahoo Finance.")
+        # Download buttons
+        st.download_button(
+            label="Download Stock Clusters CSV",
+            data=stock_report.to_csv(index=False),
+            file_name='nifty50_stock_clusters.csv',
+            mime='text/csv'
+        )
+        st.download_button(
+            label="Download Cluster Statistics CSV",
+            data=cluster_stats.to_csv(index=False),
+            file_name='nifty50_cluster_statistics.csv',
+            mime='text/csv'
+        )
+        st.download_button(
+            label="Download Cluster Transitions CSV",
+            data=transitions_df.to_csv(index=False),
+            file_name='nifty50_cluster_transitions.csv',
+            mime='text/csv'
+        )
 
 if __name__ == "__main__":
     main()
