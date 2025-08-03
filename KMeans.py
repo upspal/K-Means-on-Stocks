@@ -213,3 +213,63 @@ def main():
         with st.spinner("Downloading Nifty50 data..."):
             data = yf.download(selected_stocks, start=download_start, end=download_end, progress=False)
         st.success("Download complete!")
+
+        time_windows = []
+        for year in range(2020, 2025):
+            start = f"{year-1}-01-01"
+            end = f"{year}-01-01"
+            if pd.to_datetime(start) >= pd.to_datetime(download_start) and pd.to_datetime(end) <= pd.to_datetime(download_end):
+                time_windows.append({
+                    'name': f"{year}",
+                    'start': start,
+                    'end': end
+                })
+
+        if not time_windows:
+            st.error("No valid time windows within the selected download period.")
+            return
+
+        with st.spinner("Running K-means clustering for each time window..."):
+            all_results = []
+            for window in time_windows:
+                st.write(f"Processing window: {window['name']}...")
+                result = run_kmeans_for_window(data, window, k=k)
+                all_results.append(result)
+                st.pyplot(result['plot_fig'])
+                st.write(f"Completed window: {window['name']}")
+
+        with st.spinner("Creating final report..."):
+            stock_report, cluster_stats = create_report(all_results, k=k)
+            transitions_df = create_transitions(stock_report)
+
+        st.header("Stock Cluster Assignments")
+        st.dataframe(stock_report)
+
+        st.header("Cluster Statistics")
+        st.dataframe(cluster_stats)
+
+        st.header("Cluster Transitions")
+        st.dataframe(transitions_df)
+
+        # Download buttons
+        st.download_button(
+            label="Download Stock Clusters CSV",
+            data=stock_report.to_csv(index=False),
+            file_name='nifty50_stock_clusters.csv',
+            mime='text/csv'
+        )
+        st.download_button(
+            label="Download Cluster Statistics CSV",
+            data=cluster_stats.to_csv(index=False),
+            file_name='nifty50_cluster_statistics.csv',
+            mime='text/csv'
+        )
+        st.download_button(
+            label="Download Cluster Transitions CSV",
+            data=transitions_df.to_csv(index=False),
+            file_name='nifty50_cluster_transitions.csv',
+            mime='text/csv'
+        )
+
+if __name__ == "__main__":
+    main()
