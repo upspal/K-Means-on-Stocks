@@ -87,7 +87,7 @@ def main():
     # Clustering Parameters
     st.sidebar.header("Clustering Parameters")
     k = st.sidebar.slider("Number of Clusters (k)", min_value=2, max_value=10, value=4)
-    timeframe_start = st.sidebar.date_input("Timeframe (Start)", pd.to_datetime("2020-01-01"), max_value=pd.to_datetime(date.today() - timedelta(days=-1)))
+    timeframe_start = st.sidebar.date_input("Timeframe (Start)", pd.to_datetime("2020-01-01"), max_value=pd.to_datetime(date.today() - timedelta(days=1)))
     timeframe_end = st.sidebar.date_input("Timeframe(End)", pd.to_datetime("2021-01-01"), max_value=pd.to_datetime(date.today()))
 
     # Stock Selection
@@ -100,8 +100,11 @@ def main():
     else:
         selected_stocks = st.sidebar.multiselect("Select Stock", nifty50_tickers)
     if custom_ticker:
-        custom_stocks = [stock.strip() for stock in custom_ticker.split(' ')]
+        custom_stocks = [stock.strip().upper() for stock in custom_ticker.split(' ')]
         selected_stocks.extend(custom_stocks)
+
+    # Remove duplicates
+    selected_stocks = list(set(selected_stocks))
 
     if not selected_stocks:
         st.warning("Please select at least one stock to proceed.")
@@ -114,22 +117,22 @@ def main():
 
     # Data Fetching and Preprocessing
     try:
-        if timeframe_start == timeframe_end:
-            st.error("Start and end dates are the same. Please select different dates.")
+        if timeframe_start >= timeframe_end:
+            st.error("Start date must be before end date. Please select appropriate dates.")
             return
         
-        data = yf.download(selected_stocks, start=timeframe_start, end=timeframe_end)
+        data = yf.download(selected_stocks, start=timeframe_start, end=timeframe_end, progress=False)
         
-        if data.empty:
-            st.error("No data found for the selected stocks. Please check if the stock symbols are correct.")
+        if data.empty or 'Adj Close' not in data.columns.get_level_values(0):
+            st.error("No data found for the selected stocks and timeframe. Please check if the stock symbols are correct or try a different timeframe.")
             return
             
         returns = data['Adj Close'].pct_change()
         returns = returns.iloc[1:]
-        returns = returns.dropna(axis=1)
+        returns = returns.dropna(axis=1, how='all')  # Drop columns that are all NaN
         
-        if returns.empty:
-            st.error("No valid return data available for the selected stocks and timeframe.")
+        if returns.empty or returns.shape[1] == 0:
+            st.error("No valid return data available for the selected stocks and timeframe. This may be due to invalid tickers or insufficient data in the period.")
             return
 
         if len(returns.columns) < k:
@@ -143,6 +146,10 @@ def main():
         cluster_data["Sharpe Ratio"] = cluster_data["Mean Returns"] / cluster_data["Volatility"]
 
         cluster_data = cluster_data.dropna(subset=features)
+
+        if cluster_data.empty:
+            st.error("No valid features data after processing. Please try different stocks or timeframe.")
+            return
 
         scaled_data = ((cluster_data - cluster_data.min()) / (cluster_data.max() - cluster_data.min())) * 9 + 1
 
@@ -161,12 +168,12 @@ def main():
         
         summary_data = pd.DataFrame(columns=["Cluster", "Average Returns", "Volatility", "Sharpe Ratio"])
         for cluster in dataset['Cluster'].unique():
-            cluster_data = dataset[dataset['Cluster'] == cluster]
-            avg_returns = cluster_data['Mean Returns'].mean()
-            volatility = cluster_data['Volatility'].mean()
-            sharpe_ratio = cluster_data['Sharpe Ratio'].mean()
+            cluster_group = dataset[dataset['Cluster'] == cluster]
+            avg_returns = cluster_group['Mean Returns'].mean()
+            volatility = cluster_group['Volatility'].mean()
+            sharpe_ratio = cluster_group['Sharpe Ratio'].mean()
             summary_data = pd.concat([summary_data, pd.DataFrame({"Cluster": [cluster], "Average Returns": [avg_returns], "Volatility": [volatility], "Sharpe Ratio": [sharpe_ratio]})], ignore_index=True)
-            summary_data = summary_data.sort_values("Cluster", ascending=True)
+        summary_data = summary_data.sort_values("Cluster", ascending=True)
         # Display summary data using st.metric
         for index, row in summary_data.iterrows():
             st.header(f"Cluster {row['Cluster']}")
@@ -180,8 +187,7 @@ def main():
             
     except Exception as e:
         st.error(f"An error occurred: {str(e)}")
-        if "Invalid ticker" in str(e):
-            st.error("One or more stock symbols are invalid. Please check your input.")
+        st.error("Please check your inputs and try again. If the problem persists, the issue may be with data availability from Yahoo Finance.")
 
 if __name__ == "__main__":
     main()
