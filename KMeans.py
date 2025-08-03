@@ -3,9 +3,21 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 from sklearn.decomposition import PCA
-from niftystocks import ns
 import matplotlib.pyplot as plt
 from datetime import date, timedelta
+
+nifty50_tickers = [
+    'RELIANCE.NS', 'HDFCBANK.NS', 'ICICIBANK.NS', 'INFY.NS', 'TCS.NS',
+    'HINDUNILVR.NS', 'ITC.NS', 'SBIN.NS', 'BHARTIARTL.NS', 'KOTAKBANK.NS',
+    'LT.NS', 'AXISBANK.NS', 'BAJFINANCE.NS', 'ASIANPAINT.NS', 'MARUTI.NS',
+    'HCLTECH.NS', 'SUNPHARMA.NS', 'TITAN.NS', 'TATAMOTORS.NS', 'ULTRACEMCO.NS',
+    'BAJAJFINSV.NS', 'WIPRO.NS', 'NTPC.NS', 'POWERGRID.NS', 'ADANIPORTS.NS',
+    'JSWSTEEL.NS', 'TECHM.NS', 'ADANIENT.NS', 'TATASTEEL.NS', 'NESTLEIND.NS',
+    'M&M.NS', 'ONGC.NS', 'GRASIM.NS', 'INDUSINDBK.NS', 'HINDALCO.NS',
+    'CIPLA.NS', 'DRREDDY.NS', 'BAJAJ-AUTO.NS', 'COALINDIA.NS', 'EICHERMOT.NS',
+    'SBILIFE.NS', 'HDFCLIFE.NS', 'BRITANNIA.NS', 'TATACONSUM.NS', 'APOLLOHOSP.NS',
+    'HEROMOTOCO.NS', 'DIVISLAB.NS', 'UPL.NS', 'BPCL.NS', 'SHREECEM.NS'
+]
 
 def random_centroids(scaled_data, k):
     centroids = []
@@ -84,9 +96,9 @@ def main():
     select_all = st.sidebar.checkbox("Select All Stocks",value=True)
     selected_stocks = []
     if select_all:
-        selected_stocks = ns.get_nifty50_with_ns()
+        selected_stocks = nifty50_tickers
     else:
-        selected_stocks = st.sidebar.multiselect("Select Stock", ns.get_nifty50_with_ns())
+        selected_stocks = st.sidebar.multiselect("Select Stock", nifty50_tickers)
     if custom_ticker:
         custom_stocks = [stock.strip() for stock in custom_ticker.split(' ')]
         selected_stocks.extend(custom_stocks)
