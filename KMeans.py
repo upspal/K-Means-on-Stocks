@@ -178,6 +178,26 @@ def create_transitions(stock_report):
     transitions_df.reset_index(inplace=True)
     return transitions_df
 
+def download_data(tickers, start, end):
+    close_data = pd.DataFrame()
+    failed_tickers = []
+    for ticker in tickers:
+        try:
+            df = yf.download(ticker, start=start, end=end, progress=False)
+            if not df.empty:
+                close_data[ticker] = df['Close']
+            else:
+                failed_tickers.append(ticker)
+        except Exception as e:
+            st.warning(f"Failed to download {ticker}: {str(e)}")
+            failed_tickers.append(ticker)
+    if close_data.empty:
+        st.error("Failed to download data for all selected stocks. Please check your internet connection or try fewer stocks.")
+        return None
+    if failed_tickers:
+        st.warning(f"Failed to download data for: {', '.join(failed_tickers)}")
+    return {'Close': close_data}
+
 def main():
     st.set_page_config(
         page_title="K-Means Clustering for Nifty50 Stocks",
@@ -211,7 +231,9 @@ def main():
 
     if run_analysis:
         with st.spinner("Downloading Nifty50 data..."):
-            data = yf.download(selected_stocks, start=download_start, end=download_end, progress=False)
+            data = download_data(selected_stocks, download_start, download_end)
+        if data is None:
+            return
         st.success("Download complete!")
 
         time_windows = []
